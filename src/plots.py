@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from .sensitivity_analysis import get_default_param_value, get_default_param_index
+from .solve_ode import alpha0
 
 
 def vertical_stack_plot_3(param_name: str, param_range: pd.Series, switching_density: pd.Series, fold_repression: pd.Series, transition_time: pd.Series, xlabel: str):
@@ -33,10 +34,10 @@ def vertical_stack_plot_3(param_name: str, param_range: pd.Series, switching_den
 
 
 #2 parameter varied sensitivity analysis data and plots y vs x for different leakiness. 
-def plot2param_vary(params_metric_df, Xparam, Yparam, xlabel = 'xlabel', ylabel = 'ylabel' ):
+def plot_2param_vary(metrics_df, Xparam, Yparam, xlabel = 'xlabel', ylabel = 'ylabel' ):
     fig, ax = plt.subplots()
     for i in [0, round(alpha0*0.5, 1), alpha0, round(alpha0*1.5, 1), round(alpha0*2, 1)  ]:
-        submetric_df = params_df[params_df['alphaT'] == i]
+        subdf = metrics_df[metrics_df['alphaT'] == i]
         ax.plot(subdf[Xparam], subdf[Yparam], linewidth = 2, label = '%s' %i);
     for i in ['right', 'left', 'top', 'bottom']:
         ax.spines[i].set(linewidth = 1.25)

@@ -7,7 +7,7 @@ from .solve_ode import solve_qcrispri, solve_qcrispri_sponge, alpha0, kd1, kd2, 
 from .calculate_metrics import CalculateDynamicsMetrics
 
 
-def single_param_vary(param, param_range):
+def vary_single_parameter(param: str, param_range: list)-> (pd.DataFrame,pd.DataFrame):
     """solve qcrispri model and calculate switch density, foldrepression, transition time for a range of values of any parameter: 
     alphaT, activity_ratio, kDNA_bind, kcomplex.
     
@@ -35,33 +35,39 @@ def single_param_vary(param, param_range):
         switch_density, fold_repression, transition_time = CalculateDynamicsMetrics(qcrispri_df.GFP, t, qcrispri_df.N).get_dynamic_metrics()
 
         new_row = {f"{param}_value": i, 'switching_density': switch_density, 'fold_repression': fold_repression, 'transition_time':transition_time}
-        metric_df = metric_df.append(new_row, ignore_index = True)
+        metric_df = pd.concat([metric_df, pd.DataFrame([new_row])], ignore_index = True)
     return(gfp_df, metric_df)
 
 
 # solve qcrispri model while varying 2 parameters and calcuate dynamics parameters and compile gfp data into a df
-def twoParam_vary(param1, param1_range, param2, param2_range):
-    param_df = pd.DataFrame(columns=[param1, param2, 'act_density', 'FoldRepression', 'Transition_time', 'MaxGFP'])
+def vary_two_parameter(param1: str, param1_range: list, param2: str, param2_range: list) -> (pd.DataFrame, pd.DataFrame):
+    """solve qcrispri model and calculate switch density, foldrepression, transition time while varying two parameters at once
+
+    Args:
+        param1: name of first parameter to vary
+        param1_range: list of values of first parameter to use 
+        param2: name of second parameter to vary
+        param2_range: list of values of second parameter to use
+    """
+    metric_df = pd.DataFrame(columns=[param1, param2, 'switching_density', 'fold_repression', 'transition_time', 'max_gfp'])
     gfp_df = pd.DataFrame(columns = [param1, param2, 'control', 'GFP', 'N' ])
     temp = pd.DataFrame()
     params = {'alphaT': alpha0,
               'activity_ratio': 0.1,
               'Kd1': kd1,
               'Kd2': kd2}
-    qcrispridf = convert2df()
+    
     for i in param1_range:
         params[param1] = i
         for j in param2_range:
             params[param2] = j
-            qcrispridf.qcrispri(solve_qCRISPRi(**params))
-            qcrispri_df = qcrispridf.returndf()
+            qcrispri_df = solve_qcrispri(**params)
             #calculate dynamic parameters
-            s_density = switch_density(qcrispri_df, t)
-            fold_rep = foldRepression(qcrispri_df)
-            t_time = transition_time(qcrispri_df, t)
+            switch_density, fold_repression, transition_time = CalculateDynamicsMetrics(qcrispri_df.GFP, t, qcrispri_df.N).get_dynamic_metrics()
+
             max_gfp = max(qcrispri_df.GFP)
-            new_row = {param1:i, param2:j, 'act_density': s_density, 'FoldRepression': fold_rep, 'Transition_time':t_time, 'MaxGFP':max_gfp}
-            param_df = param_df.append(new_row, ignore_index = True)
+            new_row = {param1:i, param2:j, 'switching_density': switch_density, 'fold_repression': fold_repression, 'transition_time':transition_time, 'max_gfp':max_gfp}
+            metric_df = pd.concat([metric_df, pd.DataFrame([new_row])], ignore_index = True)
             
             #create gfp dataframe
             temp[param1] = [i]*len(t)
@@ -70,47 +76,36 @@ def twoParam_vary(param1, param1_range, param2, param2_range):
             temp['GFP'] = qcrispri_df.GFP
             temp['N'] = qcrispri_df.N
             gfp_df = pd.concat([gfp_df, temp])
-    return(param_df, gfp_df)
+    return(gfp_df, metric_df)
 
 #vary decoy sites and calculate parameters and create a df with gfp and related values
-def decoysite_vary(param, param_range):
-    param_df = pd.DataFrame(columns=[param, 'act_density', 'FoldRepression', 'Transition_time', 'MaxGFP'])
-    gfp_df = pd.DataFrame(columns = [param,'control', 'GFP', 'N' ])
+def vary_decoysite(param_name:str, param_range: list):
+    metric_df = pd.DataFrame(columns=[param_name, 'act_density', 'FoldRepression', 'Transition_time', 'MaxGFP'])
+    gfp_df = pd.DataFrame(columns = [param_name,'control', 'GFP', 'N' ])
     temp = pd.DataFrame()
     params = {'alphaT': alpha0,
               'activity_ratio': 0.1,
               'Kd1': kd1,
               'Kd2': kd2,
               'decoy_sites': 10}
-    qcrispridf = convert2df()
     for i in param_range:
-        params[param] = i
-        qcrispridf.qcrispri_sponge(solve_qcrispri_sponge(**params))
-        qcrispri_df = qcrispridf.returndf()
-
-        temp[param] = [i]*len(t)
+        params[param_name] = i
+        qcrispri_df = solve_qcrispri_sponge(**params)
+    
+        temp[param_name] = [i]*len(t)
         temp['control'] = qcrispri_df.GFPc
         temp['GFP'] = qcrispri_df.GFP
         temp['N'] = qcrispri_df.N
         gfp_df = pd.concat([gfp_df, temp])
 
-        s_density = switch_density(qcrispri_df, t)
-        fold_rep = foldRepression(qcrispri_df)
-        t_time = transition_time(qcrispri_df, t)
-        new_row = {param:i, 'act_density': s_density, 'FoldRepression': fold_rep, 'Transition_time':t_time, 'MaxGFP': max(qcrispri_df.GFP)}
-        param_df = param_df.append(new_row, ignore_index = True)
-    return(gfp_df, param_df)
+        switch_density, fold_repression, transition_time = CalculateDynamicsMetrics(qcrispri_df.GFP, t, qcrispri_df.N).get_dynamic_metrics()
 
-#gets data required to make bar plots for 2 param vary
-def newRow_forBarplot_df(params, alphaT, param2, param2_value):
-    idx = params[(params['alphaT'] == alphaT) & (params[param2] == param2_value)].index[0]
-    newrow = {'alphaT': alphaT, param2:param2_value, 'act_density':params['act_density'].iloc[idx], 
-              'Transition_time':params['Transition_time'].iloc[idx], 'MaxGFP':params['MaxGFP'].iloc[idx], 'FoldRepression':params['FoldRepression'].iloc[idx]}
-    return(newrow)
+        new_row = {param_name:i, 'switching_density': switch_density, 'fold_repression': fold_repression, 'transition_time':transition_time, 'max_gfp': max(qcrispri_df.GFP)}
+        metric_df = pd.concat([metric_df, pd.DataFrame([new_row])], ignore_index = True)
+    return(gfp_df, metric_df)
 
 #returns the default parameter value of some parameters
-
-def get_default_param_value(param_name):
+def get_default_param_value(param_name:str)-> float:
     default_params = {'alphaT': alpha0,
                       'activity_ratio': 0.1,
                       'Kd1': kd1,
@@ -121,6 +116,6 @@ def get_default_param_value(param_name):
 #gets the index of a default parameter in a dataframe
 
 def get_default_param_index(param_range, param_name):
-    key = get_default_param_value(param_name)
-    return(param_range[param_range == key].index[0])
+    default_val = get_default_param_value(param_name)
+    return(param_range.index(default_val))
     
