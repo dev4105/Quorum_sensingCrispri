@@ -2,9 +2,22 @@
 This script generates the ODEs for different quorum sensing systems 
 """
 
+import numpy as np
 
+def ode_gen_quorum(y: list, t: list,  alpha: list, n: list, kd:list, deg:list, misc:list) -> list:
+    """ This function generates ODEs for the basic Quorum sensing model
 
-def ode_genQuorum(y, t, alpha, n, kd, deg, misc ):
+    Args:
+        y (list): a list of variables that are tracked in the model
+        alpha (list): list of different transciption rates
+        n (list): list of different valency 
+        kd (list): list of dissociation and reverse rates
+        deg (list): list of degradation rates
+        misc (list): list of constants used in the model
+
+    Returns:
+        list: returns a set of equations to model the system in a list format
+    """
     #unpack y values. 
     inAcP, AcP, N, LuxR, A, LuxR_A, GFP = y
     
@@ -21,7 +34,7 @@ def ode_genQuorum(y, t, alpha, n, kd, deg, misc ):
               -(k2R/kd2)*LuxR_A*inAcP + k2R*AcP,
               
               #2. AcP: Active promoter
-              (k2R/kd2)*LuxR_A*inAcP - k2R*AcP, 
+              (k2R/kd2)*LuxR_A*inAcP - k2R*AcP,
               
               #3. N (cell density CFU/ml)
               r*N*(1- N/K),
@@ -41,16 +54,27 @@ def ode_genQuorum(y, t, alpha, n, kd, deg, misc ):
               (k1R/kd1)*(LuxR**2)*(A**2) - k1R*LuxR_A - (k2R/kd2)*LuxR_A*inAcP + k2R*AcP -(mu + dc)*LuxR_A,
               
               #7. GFP - creation: expression from active and inactive luxI promoter
-              (alphaI*AcP + alpha0*inAcP)*nG - (mu+ dG)*GFP 
-             ]  
-              
-    
-    return(values)
+              (alphaI*AcP + alpha0*inAcP)*nG - (mu+ dG)*GFP
+             ]
+    return values
 
 
 #Function to generate ODEs for the qCRISPRi system
 
-def ode_gen_qCRISPRi(y, t, alpha, n, kd, deg, misc ):
+def ode_gen_qcrispri(y: list, t: list,  alpha: list, n: list, kd: list, deg: list, misc: list ) -> list:
+    """ This function generates ODEs for the standard qcripsi model
+
+    Args:
+        y (list): a list of variables that are tracked in the model
+        alpha (list): list of different transciption rates
+        n (list): list of different valency 
+        kd (list): list of dissociation and reverse rates
+        deg (list): list of degradation rates
+        misc (list): list of constants used in the model
+
+    Returns:
+        list: returns a set of equations to model the system in a list format
+    """
     #unpack y values. 
     inAcP, AcP, N, LuxR, A, LuxR_A, GFPc, GFP, dCas9, pC, pD = y
     
@@ -95,7 +119,20 @@ def ode_gen_qCRISPRi(y, t, alpha, n, kd, deg, misc ):
 
 # simplified qCRIPSRi system to model LuxR stringency
 
-def ode_gen_qCRISPRiSimple(y, t, alpha, n, kd, deg, misc ):
+def ode_gen_qcrispri_simple(y: list, t: list, alpha: list, n: list, kd: list, deg: list, misc: list ) -> list:
+    """ This function generates ODEs for the simplified qcrispri model. This is modeled using Hill equations. 
+
+    Args:
+        y (list): a list of variables that are tracked in the model
+        alpha (list): list of different transciption rates
+        n (list): list of different valency 
+        kd (list): list of dissociation and reverse rates
+        deg (list): list of degradation rates
+        misc (list): list of constants used in the model
+
+    Returns:
+        list: returns a set of equations to model the system in a list format
+    """
     #unpack y values. 
     AHL, dCas9, GFP, N  = y
     
@@ -119,7 +156,20 @@ def ode_gen_qCRISPRiSimple(y, t, alpha, n, kd, deg, misc ):
 
 #Function to generate ODEs for the qCRISPRi sponge system
 
-def ode_gen_qCRISPRi_sponge(y, t, alpha, n, kd, deg, misc ):
+def ode_gen_qcrispri_sponge(y: list, t:list , alpha: list, n: list, kd: list, deg: list, misc: list ) -> list:
+    """ This function generates ODEs for the qcrispri system that uses decoy sites to regulate dynamics
+
+    Args:
+        y (list): a list of variables that are tracked in the model
+        alpha (list): list of different transciption rates
+        n (list): list of different valency 
+        kd (list): list of dissociation and reverse rates
+        deg (list): list of degradation rates
+        misc (list): list of constants used in the model
+
+    Returns:
+        list: returns a set of equations to model the system in a list format
+    """
     #unpack y values. 
     inAcP, AcP, N, LuxR, A, LuxR_A, GFPc, GFP, dCas9, pC, pD, pS, pSB = y
     

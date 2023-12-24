@@ -1,11 +1,14 @@
-import numpy as np
-from scipy.integrate import odeint
+"""This script contains functions that solves different models based on quorum sensing and returns the solution array. """
+
 from configparser import ConfigParser
-from generateODE import *
+import numpy as np
+import pandas as pd
+from scipy.integrate import odeint
+from .generate_ode import ode_gen_quorum, ode_gen_qcrispri, ode_gen_qcrispri_simple, ode_gen_qcrispri_sponge
 
 #load constants form config file
 config_object = ConfigParser()
-config_object.read("config.ini")
+config_object.read("./src/config.ini")
 
 productionRates = config_object["PRODUCTION_RATES"]
 valency = config_object["VALENCY"]
@@ -71,17 +74,29 @@ K1 = eval(stringent_sys_params["K1"])     #
 
 t = np.linspace(0,48, 3000)
 
-def solve_baseModel():
+
+def convert2df(sol_array:list[list], column_list: list):
+    sol_df = pd.DataFrame(columns = column_list)
+    for i, column in enumerate(sol_df.columns):
+        sol_df[column] = sol_array[:,i]
+    return sol_df
+        
+
+def solve_quorum():
     alpha = [alpha0, alphaI, alphaR]
     n = [nA, nG]
     kd = [k1R, k2R, kd1, kd2]
     deg = [dR, dA, dG, dc]
-    misc = [r, K, Vc, pT, mu, m, c]
+    miscc = [r, K, Vc, pT, mu, m, c]
     y0 = [pT, 0, 10**7, 0, 0, 0, 0 ]
     # Solve ODEs for "BASE MODEL
-    return(odeint(ode_genQuorum, y0, t,args=(alpha, n, kd, deg, misc)))
 
-def solve_qCRISPRi(alphaT = alpha0, alphaIac = alphaI,  activity_ratio=0.1, Kd1 = kd1, Kd2 = kd2, gfp0 = 1000):
+    sol = odeint(ode_gen_quorum, y0, t,args=(alpha, n, kd, deg, miscc))
+    cols = ['inAcP', 'AcP', 'N', 'LuxR', 'AHL', 'LuxR_A', 'GFP']
+    return(convert2df(sol, cols))
+
+
+def solve_qcrispri(alphaT = alpha0, alphaIac = alphaI,  activity_ratio=0.1, Kd1 = kd1, Kd2 = kd2, gfp0 = 1000):
 
     #use 50% as default to study + and - variation
     alphaG_deac = alphaG*activity_ratio
@@ -92,28 +107,32 @@ def solve_qCRISPRi(alphaT = alpha0, alphaIac = alphaI,  activity_ratio=0.1, Kd1 
     n = nA
     kd = [k1R, k2R,kcasR, kd1, kd2, kdCas]
     deg = [dR, dA, dG, dCas, dc]
-    misc = [r, K, Vc, pT, mu, m, c]
+    miscc = [r, K, Vc, pT, mu, m, c]
 
     # Solve ODEs for "qCRISPRi" 
-    return(odeint(ode_gen_qCRISPRi, y0, t, args=(alpha, n, kd, deg, misc)))
+    sol = odeint(ode_gen_qcrispri, y0, t, args=(alpha, n, kd, deg, miscc))
+    cols = ['inAcP', 'AcP', 'N', 'LuxR', 'AHL', 'LuxR_A', 'GFPc', 'GFP', 'dCas9', 'pC', 'pD']
+    return(convert2df(sol, cols))
 
 
 
-def solve_qCRISPRiSimple(alphaRL = alpha_rl, alphaRA = alpha_ra, nH_AHL = nHill_A, KD = Kd, rs = r1):
+def solve_qcrispri_simple(alphaRL = alpha_rl, alphaRA = alpha_ra, nH_AHL = nHill_A, KD = Kd, rs = r1):
     
     y0=[0, 0, 1000, 10**7]
     alpha = [alpha_pl, alphaRL, alphaRA, alpha_g]
     n = [nH_AHL, nHill_c, nAHL]
     kd = [KD, KdCas]
     deg = [Kdeg_A, Kdeg_Cas, Kdeg_G]
-    misc = [rs, K1, Vc, m1, c1]
+    miscc = [rs, K1, Vc, m1, c1]
 
     # Solve ODEs for "qCRISPRi" 
-    return(odeint(ode_gen_qCRISPRiSimple, y0, t, args=(alpha, n, kd, deg, misc)))
+    sol = odeint(ode_gen_qcrispri_simple, y0, t, args=(alpha, n, kd, deg, miscc))
+    cols = ['AHL', 'dCas9', 'GFP', 'N']
+    return(convert2df(sol, cols))
 
 
 
-def solve_qCRISPRi_sponge(alphaT = alpha0, activity_ratio = 0.1, Kd1 = kd1, Kd2 = kd2, decoy_sites = 10):
+def solve_qcrispri_sponge(alphaT = alpha0, activity_ratio = 0.1, Kd1 = kd1, Kd2 = kd2, decoy_sites = 10):
     
     alphaG_deac = alphaG*activity_ratio
     kd1 = Kd1
@@ -125,7 +144,9 @@ def solve_qCRISPRi_sponge(alphaT = alpha0, activity_ratio = 0.1, Kd1 = kd1, Kd2 
     n = nA
     kd = [k1R, k2R,kcasR, kd1, kd2, kdCas]
     deg = [dR, dA, dG, dCas, dc]
-    misc = [r, K, Vc, pT, mu, m, c]
+    miscc = [r, K, Vc, pT, mu, m, c]
 
     # Solve ODEs for "qCRISPRi sponge" 
-    return(odeint(ode_gen_qCRISPRi_sponge, y0, t,args=(alpha, n, kd, deg, misc)))
+    sol = odeint(ode_gen_qcrispri_sponge, y0, t,args=(alpha, n, kd, deg, miscc))
+    cols = ['inAcP', 'AcP', 'N', 'LuxR', 'AHL', 'LuxR_A', 'GFPc', 'GFP', 'dCas9', 'pC', 'pD', 'pS', 'pSB']
+    return(convert2df(sol, cols))
